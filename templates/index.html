@@ -124,13 +124,8 @@
 										<p>{{ news.content }}</p>
 									</div>
 									<!-- Button to show content -->
-									<button class="button" onclick="toggleContent({{ forloop.counter }})">
-										<div class="button__dots">
-											<span class="dot"></span>
-											<span class="dot"></span>
-											<span class="dot"></span>
-										</div>
-									</button>
+									<button onclick="summarizeNews({{ news.id }})">요약하기</button>
+									<div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
 								</li>
 							</div>
 						</div>
@@ -140,6 +135,7 @@
 			</section>
 
 			<script>
+				// 요약 내용을 토글하는 기능
 				function toggleContent(index) {
 					var contentDiv = document.getElementById('content-' + index);
 					if (contentDiv.style.display === 'none') {
@@ -148,7 +144,23 @@
 						contentDiv.style.display = 'none';
 					}
 				}
-			</script>
+				
+				// 뉴스 요약을 가져오는 Ajax 함수
+				function summarizeNews(newsId) {
+					// Fetch API를 사용하여 요약을 서버에 요청
+					fetch('/summarize/' + newsId + '/')
+					.then(response => response.json())
+					.then(data => {
+						// 서버로부터 받은 요약 결과를 페이지에 표시
+						var summaryDiv = document.getElementById('summary-' + newsId);
+						summaryDiv.innerHTML = data.summary; // 서버로부터 받은 요약 내용
+						summaryDiv.style.display = 'block';
+					})
+					.catch(error => {
+						console.error('Error:', error);
+					});
+				}
+				</script>
 			
 			
 			

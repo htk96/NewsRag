@@ -1,9 +1,4 @@
 <!DOCTYPE HTML>
-<!--
-	Halcyonic by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
 <html>
 	<head>
 		<title>Halcyonic by HTML5 UP</title>
@@ -13,6 +8,13 @@
         <link rel="stylesheet" href="{% static 'css/main.css' %}" />
 
 		<style>
+			.news-box {
+				transition: background-color 0.3s ease, border-radius 0.3s ease; 
+			}
+			.news-box:hover {
+				background-color: #007788; /* 마우스 오버 시 배경색 변경 */
+				border-radius: 15px; /* 마우스 오버 시 모서리를 둥글게 */
+			}
 			.button {
 			  display: inline-block;
 			  padding: 10px 25px;
@@ -49,6 +51,33 @@
 			  border-radius: 50%;
 			  margin: 0 2px;
 			}
+			.progress-bar {
+				width: 100%;
+				background-color: #f0f0f0;
+				border-radius: 20px; 
+				position: relative; 
+				overflow: hidden; 
+				box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.1); 
+			}
+			
+			.progress-bar-value {
+				display: block;
+				height: 30px;
+				background-image: linear-gradient(to right, #99FFFF, #CCFFFF);
+				transition: width 0.5s ease;
+				border-radius: 20px 0 0 20px; 
+			}
+			
+			.progress-bar-text {
+				position: absolute;
+				width: 100%;
+				text-align: center;
+				line-height: 30px; 
+				font-weight: bold;
+				font-size: 0.8em;
+				color: #ffffff;
+				top: 0;
+			}
 		  </style>
 	</head>
 	<body>
@@ -61,23 +90,16 @@
 		{% endif %}
 
 		<div id="page-wrapper">
-
-			<!-- Header -->
 				<section id="header">
 					<div class="container">
 						<div class="row">
 							<div class="col-12">
-
-								<!-- Logo -->
                                 <h1><a href="{% url 'index' %}" id="logo">NEWS RAG</a></h1>
-
-								<!-- Nav -->
 									<nav id="nav">
-										<a href="{% url 'index' %}" id="logo">AI 타임즈</a>
-										<a href="{% url 'index' %}" id="logo">뉴스홈2..</a>
-										<a href="{% url 'index' %}" id="logo">뉴스홈3..</a>
+										<a href="{% url 'index' %}" id="logo">Summary ver.1(T-5)</a>
+										<a href="{% url 'index' %}" id="logo">Summary ver.2(Gemma 04.24,,)</a>
+										{% comment %} <a href="{% url 'index' %}" id="logo">Summary ver.3</a> {% endcomment %}
 									</nav>
-
 							</div>
 						</div>
 					</div>
@@ -86,15 +108,13 @@
 							<div class="row">
 								<div class="col-6 col-12-medium">
 
-									<!-- Banner Copy -->
 										<p>오늘 뉴스 요약</p>
 										<a href="{% url 'crawl-news' %}" class="button-large">뉴스 업데이트!</a>
 
 								</div>
 								<div class="col-6 col-12-medium imp-medium">
 
-									<!-- Banner Image -->
-									<p>헤드라인 넣을까?</p>
+									<p>AI 타임즈 TOP10 기사를 간편하게</p>
 										<a href="#" class="bordered-feature-image"><img src="images/banner.jpg" alt="" /></a>
 
 								</div>
@@ -103,28 +123,31 @@
 					</div>
 				</section>
 
-			<!-- Features -->
 			<section id="features">
 				<div class="container">
 					<div class="row">
 						{% for news in news_list %}
 						<div class="col-md-6 col-12" style="width: 50%;">
-							<div class="news-box" onmouseover="this.style.backgroundColor='#007788'" onmouseout="this.style.backgroundColor=''">
+							<div class="news-box">
 								<li>
 									<h1>Rank: {{ news.rank }}</h1>
-									<h2>{{ news.title }}</h2>
+									<a href="{{ news.url }}">
+										<h2>{{ news.title }}</h2>
+									</a>
 									<p>Published Date: {{ news.published_date }}</p>
 									{% if '.gif' in news.photo_url %}
 										<p>영상 없음.</p>
 									{% elif 'youtube' in news.photo_url %}
 										<div>Video: <iframe width="560" height="315" src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
 									{% endif %}
-									<!-- Hidden content div -->
 									<div id="content-{{ forloop.counter }}" class="news-content" style="display: none;">
 										<p>{{ news.content }}</p>
 									</div>
-									<!-- Button to show content -->
-									<button onclick="summarizeNews({{ news.id }})">요약하기</button>
+									<button onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
+									<div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
+										<div class="progress-bar-value" style="width: 0%;"></div>
+										<span class="progress-bar-text">Idle state</span>
+									</div>
 									<div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
 								</li>
 							</div>
@@ -160,51 +183,68 @@
 						console.error('Error:', error);
 					});
 				}
+				function showProgress(newsId) {
+					var progressBar = document.getElementById('progress-' + newsId);
+					var progressText = progressBar.querySelector('.progress-bar-text');
+					progressBar.style.display = 'block';
+					var progressValue = progressBar.querySelector('.progress-bar-value');
+					progressValue.style.width = '25%'; // 시작할 때 50%로 설정
+					progressText.textContent = '처리중...'; // 텍스트 업데이트
+				}
+				
+				function summarizeNews(newsId) {
+					var progressBar = document.getElementById('progress-' + newsId);
+					var progressValue = progressBar.querySelector('.progress-bar-value');
+				
+					// Fetch API를 사용하여 요약을 서버에 요청
+					fetch('/summarize/' + newsId + '/')
+					.then(response => response.json())
+					.then(data => {
+						// 서버로부터 받은 요약 결과를 페이지에 표시
+						var summaryDiv = document.getElementById('summary-' + newsId);
+						summaryDiv.innerHTML = data.summary; // 서버로부터 받은 요약 내용
+						summaryDiv.style.display = 'block';
+				
+						// 프로그레스 바 완료
+						progressValue.style.width = '100%'; // 요약 완료 시 100%로 설정
+						setTimeout(() => {
+							progressBar.style.display = 'none'; // 진행 바 숨김
+							progressValue.style.width = '0%'; // 다음 사용을 위해 리셋
+						}, 1000); // 1초 후에 프로그레스 바 숨김
+					})
+					.catch(error => {
+						console.error('Error:', error);
+						progressBar.style.display = 'none'; // 에러 시 프로그레스 바 숨김
+					});
+				}
 				</script>
 			
-			
-			
-			<!-- Footer -->
 				<section id="footer">
 					<div class="container">
 						<div class="row">
 							<div class="col-8 col-12-medium">
-
-								<!-- Links -->
 									<section>
 										<h2>Links to Important Stuff</h2>
 										<div>
 											<div class="row">
 												<div class="col-3 col-12-small">
 													<ul class="link-list last-child">
-														<li><a href="#">Neque amet dapibus</a></li>
-														<li><a href="#">Sed mattis quis rutrum</a></li>
-														<li><a href="#">Accumsan suspendisse</a></li>
-														<li><a href="#">Eu varius vitae magna</a></li>
+														<li><a href="https://huggingface.co/du-kang/custom4">T-5 huggingface</a></li>
 													</ul>
 												</div>
 												<div class="col-3 col-12-small">
 													<ul class="link-list last-child">
-														<li><a href="#">Neque amet dapibus</a></li>
-														<li><a href="#">Sed mattis quis rutrum</a></li>
-														<li><a href="#">Accumsan suspendisse</a></li>
-														<li><a href="#">Eu varius vitae magna</a></li>
+														<li><a href="#">GEMMA huggingface</a></li>
 													</ul>
 												</div>
 												<div class="col-3 col-12-small">
 													<ul class="link-list last-child">
-														<li><a href="#">Neque amet dapibus</a></li>
-														<li><a href="#">Sed mattis quis rutrum</a></li>
-														<li><a href="#">Accumsan suspendisse</a></li>
-														<li><a href="#">Eu varius vitae magna</a></li>
+														<li><a href="#">Coming soon</a></li>
 													</ul>
 												</div>
 												<div class="col-3 col-12-small">
 													<ul class="link-list last-child">
-														<li><a href="#">Neque amet dapibus</a></li>
-														<li><a href="#">Sed mattis quis rutrum</a></li>
-														<li><a href="#">Accumsan suspendisse</a></li>
-														<li><a href="#">Eu varius vitae magna</a></li>
+														<li><a href="https://www.instagram.com/htk96/">instagram</a></li>
 													</ul>
 												</div>
 											</div>
@@ -216,12 +256,10 @@
 
 								<!-- Blurb -->
 									<section>
-										<h2>An Informative Text Blurb</h2>
+										<h2>News</h2>
 										<p>
-											Duis neque nisi, dapibus sed mattis quis, rutrum accumsan sed. Suspendisse eu
-											varius nibh. Suspendisse vitae magna eget odio amet mollis. Duis neque nisi,
-											dapibus sed mattis quis, sed rutrum accumsan sed. Suspendisse eu varius nibh
-											lorem ipsum amet dolor sit amet lorem ipsum consequat gravida justo mollis.
+											The Gemma version of the summarization model is scheduled to be updated on April 25th. 
+											We look forward to your anticipation.
 										</p>
 									</section>
 

@@ -28,6 +28,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = False
+
+# ALLOWED_HOSTS = [
+#     '(pythonanywhere htk96).pythonanywhere.com'
+# ]
+
 
 # Application definition
 

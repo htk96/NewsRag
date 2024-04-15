@@ -73,19 +73,19 @@ def crawl_news_view(request):
     return render(request, 'index.html', {'news_list': news_list})
 
 
-tokenizer = AutoTokenizer.from_pretrained('eenzeenee/t5-base-korean-summarization')
-model = AutoModelForSeq2SeqLM.from_pretrained('eenzeenee/t5-base-korean-summarization')
+model_name = 'du-kang/custom4'
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 def summarize_text(request, news_id):
     news_article = get_object_or_404(News, pk=news_id)
-    text_to_summarize = news_article.content  # 가정: News 모델에 'text' 필드가 있다고 가정합니다.
+    text_to_summarize = news_article.content
     
     prefix = "summarize: "
-    inputs = tokenizer(prefix + text_to_summarize, return_tensors="pt", padding=True, truncation=True, max_length=512)
-    summary_outputs = model.generate(**inputs, num_beams=4, max_length=200, early_stopping=True)
+    inputs = tokenizer(prefix + text_to_summarize, return_tensors="pt", padding=True, truncation=True, max_length=3000)
+    summary_outputs = model.generate(**inputs, num_beams=5, max_length=300, early_stopping=True)
     summary_text = tokenizer.decode(summary_outputs[0], skip_special_tokens=True)
 
-    # 요약을 데이터베이스에 저장합니다.
     summary, created = Summary.objects.get_or_create(
         news=news_article,
         defaults={'summary_text': summary_text}
@@ -94,5 +94,4 @@ def summarize_text(request, news_id):
         summary.summary_text = summary_text
         summary.save()
 
-    # 요약된 텍스트와 함께 페이지를 렌더링합니다.
     return JsonResponse({'summary': summary.summary_text})

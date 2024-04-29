@@ -1,0 +1,153 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block title %}뉴스 요약{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="{% static 'styles.css' %}"> <!-- 이전 스타일을 사용하는 경우 -->
+<style>
+    /* 페이지 스타일 */
+    .news-item {
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+        padding: 15px;
+        transition: box-shadow 0.3s ease;
+    }
+
+    .news-item:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    /* 버튼 스타일 */
+    .read-more-button {
+      display: block; /* 버튼을 블록 요소로 만들어 전체 너비를 차지하게 함 */
+      width: 100%;
+      padding: 10px 0;
+      margin-top: 15px;
+      text-align: center;
+      background-color: #f0f0f0;
+      border: none;
+      border-radius: 20px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      outline: none;
+      font-weight: bold;
+    }
+
+    .read-more-button:hover {
+      background-color: #e8e8e8; /* 버튼 호버 시 색상 변경 */
+      box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 이미지 스타일 */
+    .news-image {
+        width: 20%;
+        height: auto;
+        margin-bottom: 15px;
+    }
+    .progress-bar {
+      width: 100%;
+      background-color: #f0f0f0;
+      border-radius: 20px; 
+      position: relative; 
+      overflow: hidden; 
+      box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.1); 
+  }
+  
+  .progress-bar-value {
+      display: block;
+      height: 30px;
+      background-image: linear-gradient(to right, #0066CC, #CCFFFF);
+      transition: width 0.5s ease;
+      border-radius: 20px 0 0 20px; 
+  }
+  
+  .progress-bar-text {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      line-height: 30px; 
+      font-weight: bold;
+      font-size: 0.8em;
+      color: #009933;
+      top: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% for news in news_list %}
+        <div class="news-item">
+            <h2>Rank {{ news.rank }}</h2>
+            <h3>{{ news.title }}</h3>
+            <p>Published Date: {{ news.published_date|date:"Y-m-d H:i" }}</p>
+            {% if news.photo_url %}
+                  <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+              {% elif 'youtube' in news.photo_url %}
+                  <div>Video: <iframe width="560" height="315" src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+            {% endif %}
+            {% with news.summary_set.first as summary %}
+                {% if summary %}
+                    <p>요약: {{ summary.summary_text }}</p>
+                {% else %}
+                    <p>요약이 없습니다 버튼을 누르세요</p>
+                    <button onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
+                    <div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
+                        <div class="progress-bar-value" style="width: 0%;"></div>
+                        <span class="progress-bar-text">Idle state</span>
+                    </div>
+                    <div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
+                {% endif %}
+            {% endwith %}
+            <button class="read-more-button" onclick="location.href='{% url 'move_chat' news.id %}'">기사 내용 상세 QA!</button>
+          </div>
+    {% endfor %}
+</div>
+<script>
+  // 요약 내용을 토글하는 기능
+  function toggleContent(index) {
+      var contentDiv = document.getElementById('content-' + index);
+      if (contentDiv.style.display === 'none') {
+          contentDiv.style.display = 'block';
+      } else {
+          contentDiv.style.display = 'none';
+      }
+  }
+  
+  // 뉴스 요약을 가져오고, 진행 상태를 표시하는 기능을 통합한 함수
+  function summarizeNews(newsId) {
+      var progressBar = document.getElementById('progress-' + newsId);
+      var progressValue = progressBar.querySelector('.progress-bar-value');
+      var progressText = progressBar.querySelector('.progress-bar-text');
+      var summaryDiv = document.getElementById('summary-' + newsId);
+  
+      // 프로그레스 바 초기화 및 표시
+      progressBar.style.display = 'block';
+      progressValue.style.width = '40%';
+      progressText.textContent = '처리중...';
+  
+      // Fetch API를 사용하여 서버에 요약을 요청
+      fetch('/summarize/' + newsId + '/')
+      .then(response => response.json())
+      .then(data => {
+          // 서버로부터 받은 요약 결과를 페이지에 표시
+          summaryDiv.innerHTML = data.summary;
+          summaryDiv.style.display = 'block';
+  
+          // 프로그레스 바 완료
+          progressValue.style.width = '100%';
+          setTimeout(() => {
+              progressBar.style.display = 'none'; // 1초 후 진행 바 숨김
+              progressValue.style.width = '0%'; // 다음 사용을 위해 리셋
+          }, 1000);
+      })
+      .catch(error => {
+          console.error('Error:', error);
+          progressBar.style.display = 'none'; // 에러 시 프로그레스 바 숨김
+          summaryDiv.innerHTML = '오류가 발생했습니다.';
+          summaryDiv.style.display = 'block';
+      });
+  }
+  </script>
+{% endblock %}

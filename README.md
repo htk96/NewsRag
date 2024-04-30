@@ -1,2 +1,14 @@
-## A T-5 fine-tuned with LoRA for summarization task.
-## RAG Chatbot Powered by Langchain and Langsmith.
+## 📰 뉴스 요약 및 환각 없는 기사 내용 기반 검색 증강 생성(RAG) 서비스
+  - 🧱프로젝트 개요
+  - 🛠Model Fine-Tuning 과정
+  - 🔗RAG 구현 과정
+## 🧱프로젝트 개요
+  1. 프로젝트 참여자: 홍태광(1인)
+  2. 프로젝트 기간: 2023.12.26. ~ 2024.04.30.
+       - NLP 기술 학습 및 프로젝트 적용 기술 탐색: 2023.12.26. ~ 2024.03.19.
+       - 데이터 전처리/모델 학습 및 기술 구현: 2024.03.20. ~ 2024.04.30.
+
+## 🛠Model Fine-Tuning 과정
+
+
+## 🔗RAG 구현 과정

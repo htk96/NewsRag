@@ -1,286 +1,188 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<title>Halcyonic by HTML5 UP</title>
+		<title>NEWS_RAG!</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
         {% load static %}
         <link rel="stylesheet" href="{% static 'css/main.css' %}" />
-
+		
 		<style>
-			.news-box {
-				transition: background-color 0.3s ease, border-radius 0.3s ease; 
-			}
-			.news-box:hover {
-				background-color: #007788; /* 마우스 오버 시 배경색 변경 */
-				border-radius: 15px; /* 마우스 오버 시 모서리를 둥글게 */
-			}
-			.button {
-			  display: inline-block;
-			  padding: 10px 25px;
-			  background-color: #f0f0f0; /* Neutral shade */
-			  border: none;
-			  border-radius: 20px; /* Rounded corners */
-			  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for 3D effect */
-			  cursor: pointer;
-			  outline: none;
-			  transition: all 0.3s ease;
-			}
-		  
-			.button:hover {
-			  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
-			}
-		  
-			.button:focus {
-			  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
-			}
-		  
-			.button:active {
-			  box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.2);
-			}
-		  
-			.button__dots {
-			  display: flex;
-			  justify-content: center;
-			}
-		  
-			.dot {
-			  height: 5px;
-			  width: 5px;
-			  background-color: #333; /* Dot color */
-			  border-radius: 50%;
-			  margin: 0 2px;
-			}
-			.progress-bar {
-				width: 100%;
-				background-color: #f0f0f0;
-				border-radius: 20px; 
-				position: relative; 
-				overflow: hidden; 
-				box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.1); 
-			}
+            .dropdown {
+                position: relative;
+                display: inline-block;
+            }
+        
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                background-color: rgba(0, 0, 0, 0);
+                min-width: 100px;
+                box-shadow: 0px 8px 16px 0px rgba(0,0,0,0);
+                z-index: 1;
+            }
+        
+            .dropdown-content a {
+                color: black;
+                padding: 12px 16px;
+                text-decoration: none;
+                display: block;
+                white-space: nowrap; 
+            }
+        
+            .dropdown-content a:hover {
+                background-color: #f1f1f1;
+            }
+        
+            .dropdown:hover .dropdown-content {
+                display: block;
+            }
+			.summary-button {
+				background-color: #66CC66; /* Green color */
+				color: white;
+				padding: 10px 20px;
+				border-radius: 20px; /* Round button */
+				border: none;
+				cursor: pointer;
+				transition: background-color 0.3s; /* Smooth transition */
+			  }
 			
-			.progress-bar-value {
-				display: block;
-				height: 30px;
-				background-image: linear-gradient(to right, #99FFFF, #CCFFFF);
-				transition: width 0.5s ease;
-				border-radius: 20px 0 0 20px; 
-			}
+			  .summary-button:hover {
+				background-color: #3399FF; /* Darker green color on hover */
+			  }
+			.bot-button {
+				background-color: #3399FF; /* Green color */
+				color: white;
+				padding: 10px 20px;
+				border-radius: 20px; /* Round button */
+				border: none;
+				cursor: pointer;
+				transition: background-color 0.3s; /* Smooth transition */
+			  }
 			
-			.progress-bar-text {
-				position: absolute;
-				width: 100%;
-				text-align: center;
-				line-height: 30px; 
-				font-weight: bold;
-				font-size: 0.8em;
-				color: #ffffff;
-				top: 0;
-			}
-		  </style>
+			  .bot-button:hover {
+				background-color: #4CAF50; /* Darker green color on hover */
+			  }
+        </style>
+		{% block styles %}{% endblock %}
 	</head>
 	<body>
-		{% if messages %}
-			<script>
-				{% for message in messages %}
-					alert("{{ message }}");
-				{% endfor %}
-			</script>
-		{% endif %}
-
 		<div id="page-wrapper">
-				<section id="header">
+			<section id="header">
+				<div class="container">
+					<div class="col-12">
+						<h1><a href="{% url 'index' %}" id="logo">NEWS RAG📰</a></h1>
+						<nav id="nav">
+							<div class="dropdown">
+								<a id="logo">Tech News! ∨</a>
+								<div class="dropdown-content">
+									<a href="{% url 'Ranking_Sum_ver1' %}" id="logo">Summary</a>
+									<a href="{% url 'Ranking_RAG' %}" id="logo">Chatbot</a>
+								</div>
+							</div>
+							<div class="dropdown">
+								<a id="logo">General News! ∨</a>
+								<div class="dropdown-content">
+									<a href="{% url 'General_Sum_Bot' %}" id="logo">Sum+bot</a>
+								</div>
+							</div>
+							<div class="dropdown">
+								<a id="logo">Laboratory! ∨</a>
+								<div class="dropdown-content">
+									<a href="{% url 'laboratory' %}" id="logo">Sum!</a>
+									<a href="{% url 'laboratory_RAG' %}" id="logo">RAG!</a>
+								</div>
+							</div>
+						</nav>
+					</div>
+				</div>
+				<div id="banner">
 					<div class="container">
 						<div class="row">
-							<div class="col-12">
-                                <h1><a href="{% url 'index' %}" id="logo">NEWS RAG</a></h1>
-									<nav id="nav">
-										<a href="{% url 'index' %}" id="logo">Summary ver.1(T-5)</a>
-										<a href="{% url 'index' %}" id="logo">Summary ver.2(Gemma 04.24,,)</a>
-										{% comment %} <a href="{% url 'index' %}" id="logo">Summary ver.3</a> {% endcomment %}
-									</nav>
+							<div class="col-6 col-12-medium">
+								<p>오늘의 뉴스</p>
+								<a href="{% url 'run_all_crawlers' %}" class="button-large">뉴스 업데이트!</a>
+							</div>
+							<div class="col-6 col-12-medium imp-medium">
+								<p></p>
+								<p>AI가 풀어주는 늬우스🧻</p>
 							</div>
 						</div>
-					</div>
-					<div id="banner">
-						<div class="container">
-							<div class="row">
-								<div class="col-6 col-12-medium">
-
-										<p>오늘 뉴스 요약</p>
-										<a href="{% url 'crawl-news' %}" class="button-large">뉴스 업데이트!</a>
-
-								</div>
-								<div class="col-6 col-12-medium imp-medium">
-
-									<p>AI 타임즈 TOP10 기사를 간편하게</p>
-										<a href="#" class="bordered-feature-image"><img src="images/banner.jpg" alt="" /></a>
-
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
-
-			<section id="features">
-				<div class="container">
-					<div class="row">
-						{% for news in news_list %}
-						<div class="col-md-6 col-12" style="width: 50%;">
-							<div class="news-box">
-								<li>
-									<h1>Rank: {{ news.rank }}</h1>
-									<a href="{{ news.url }}">
-										<h2>{{ news.title }}</h2>
-									</a>
-									<p>Published Date: {{ news.published_date }}</p>
-									{% if '.gif' in news.photo_url %}
-										<p>영상 없음.</p>
-									{% elif 'youtube' in news.photo_url %}
-										<div>Video: <iframe width="560" height="315" src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
-									{% endif %}
-									<div id="content-{{ forloop.counter }}" class="news-content" style="display: none;">
-										<p>{{ news.content }}</p>
-									</div>
-									<button onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
-									<div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
-										<div class="progress-bar-value" style="width: 0%;"></div>
-										<span class="progress-bar-text">Idle state</span>
-									</div>
-									<div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
-								</li>
-							</div>
-						</div>
-						{% endfor %}
 					</div>
 				</div>
 			</section>
-
+			{% if messages %}
 			<script>
-				// 요약 내용을 토글하는 기능
-				function toggleContent(index) {
-					var contentDiv = document.getElementById('content-' + index);
-					if (contentDiv.style.display === 'none') {
-						contentDiv.style.display = 'block';
-					} else {
-						contentDiv.style.display = 'none';
-					}
-				}
-				
-				// 뉴스 요약을 가져오는 Ajax 함수
-				function summarizeNews(newsId) {
-					// Fetch API를 사용하여 요약을 서버에 요청
-					fetch('/summarize/' + newsId + '/')
-					.then(response => response.json())
-					.then(data => {
-						// 서버로부터 받은 요약 결과를 페이지에 표시
-						var summaryDiv = document.getElementById('summary-' + newsId);
-						summaryDiv.innerHTML = data.summary; // 서버로부터 받은 요약 내용
-						summaryDiv.style.display = 'block';
-					})
-					.catch(error => {
-						console.error('Error:', error);
-					});
-				}
-				function showProgress(newsId) {
-					var progressBar = document.getElementById('progress-' + newsId);
-					var progressText = progressBar.querySelector('.progress-bar-text');
-					progressBar.style.display = 'block';
-					var progressValue = progressBar.querySelector('.progress-bar-value');
-					progressValue.style.width = '25%'; // 시작할 때 50%로 설정
-					progressText.textContent = '처리중...'; // 텍스트 업데이트
-				}
-				
-				function summarizeNews(newsId) {
-					var progressBar = document.getElementById('progress-' + newsId);
-					var progressValue = progressBar.querySelector('.progress-bar-value');
-				
-					// Fetch API를 사용하여 요약을 서버에 요청
-					fetch('/summarize/' + newsId + '/')
-					.then(response => response.json())
-					.then(data => {
-						// 서버로부터 받은 요약 결과를 페이지에 표시
-						var summaryDiv = document.getElementById('summary-' + newsId);
-						summaryDiv.innerHTML = data.summary; // 서버로부터 받은 요약 내용
-						summaryDiv.style.display = 'block';
-				
-						// 프로그레스 바 완료
-						progressValue.style.width = '100%'; // 요약 완료 시 100%로 설정
-						setTimeout(() => {
-							progressBar.style.display = 'none'; // 진행 바 숨김
-							progressValue.style.width = '0%'; // 다음 사용을 위해 리셋
-						}, 1000); // 1초 후에 프로그레스 바 숨김
-					})
-					.catch(error => {
-						console.error('Error:', error);
-						progressBar.style.display = 'none'; // 에러 시 프로그레스 바 숨김
-					});
-				}
-				</script>
-			
-				<section id="footer">
-					<div class="container">
-						<div class="row">
-							<div class="col-8 col-12-medium">
-									<section>
-										<h2>Links to Important Stuff</h2>
-										<div>
-											<div class="row">
-												<div class="col-3 col-12-small">
-													<ul class="link-list last-child">
-														<li><a href="https://huggingface.co/du-kang/custom4">T-5 huggingface</a></li>
-													</ul>
-												</div>
-												<div class="col-3 col-12-small">
-													<ul class="link-list last-child">
-														<li><a href="#">GEMMA huggingface</a></li>
-													</ul>
-												</div>
-												<div class="col-3 col-12-small">
-													<ul class="link-list last-child">
-														<li><a href="#">Coming soon</a></li>
-													</ul>
-												</div>
-												<div class="col-3 col-12-small">
-													<ul class="link-list last-child">
-														<li><a href="https://www.instagram.com/htk96/">instagram</a></li>
-													</ul>
-												</div>
-											</div>
+				{% for message in messages %}
+				alert("{{ message }}");
+				{% endfor %}
+			</script>
+			{% endif %}			
+			{% block content %}{% endblock %}
+			<section id="footer">
+				<div class="container">
+					<div class="row">
+						<div class="col-8 col-12-medium">
+							<section>
+								<h2>Links to Important Stuff</h2>
+								<div>
+									<div class="row">
+										<div class="col-3 col-12-small">
+											<ul class="link-list last-child">
+												<li>Fine-Tuning Model</li>
+												<li><a href="https://huggingface.co/du-kang/custom4">Hong's model.1</a></li>
+												<li><a href="https://huggingface.co/du-kang/custom1-3">Hong's model.2</a></li>
+											</ul>
 										</div>
-									</section>
-
-							</div>
-							<div class="col-4 col-12-medium imp-medium">
-
-								<!-- Blurb -->
-									<section>
-										<h2>News</h2>
-										<p>
-											The Gemma version of the summarization model is scheduled to be updated on April 25th. 
-											We look forward to your anticipation.
-										</p>
-									</section>
-
-							</div>
+										<div class="col-3 col-12-small">
+											<ul class="link-list last-child">
+												<li>Github </li>
+												<li><a href="https://www.github.com/htk96/NewsRag">Source code</a></li>
+											</ul>
+										</div>
+										<div class="col-3 col-12-small">
+											<ul class="link-list last-child">
+												<li>개발자 </li>
+												<li><a href="https://www.instagram.com/htk96/">TaeKwang Hong</a></li>
+											</ul>
+										</div>
+										<div class="col-3 col-12-small">
+											<ul class="link-list last-child">
+												<li>협찬 </li>
+												<li><a href="https://www.instagram.com/1day_lee/">1Day_Lee</a></li>
+											</ul>
+										</div>
+									</div>
+								</div>
+							</section>
+						</div>
+						<div class="col-4 col-12-medium imp-medium">
+							
+							<!-- Blurb -->
+							<section>
+								<h2>Breaking News!!🤗</h2>
+								<p>
+									1. Llama3-8B Model을 Fine-Tuning 한 대용량 파일 요약 기능이 5월 중 추가 예정입니다.<br>
+									2. 다양한 버전의 요약 모델과 챗봇도 Lab에서 미리 만나보세요~<br>
+									많 관 부  ☜(ﾟヮﾟ☜)
+								</p>
+							</section>
+							
 						</div>
 					</div>
-				</section>
-
-			<!-- Copyright -->
-				<div id="copyright">
-					&copy; Untitled. All rights reserved. | Design: <a href="http://html5up.net">HTML5 UP</a>
 				</div>
+			</section>
+			
+			<!-- Copyright -->
+			<div id="copyright">
+				&copy; Untitled. All rights reserved. | Design: <a href="http://html5up.net">HTML5 UP</a>
+			</div>
 
-		</div>
-
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
-
-	</body>
+			<script src="{% static 'js/jquery.min.js' %}"></script>
+			<script src="{% static 'js/browser.min.js' %}"></script>
+			<script src="{% static 'js/breakpoints.min.js' %}"></script>
+			<script src="{% static 'js/util.js' %}"></script>
+			<script src="{% static 'js/main.js' %}"></script>
+			{% block scripts %}{% endblock %}
+		</body>
 </html>

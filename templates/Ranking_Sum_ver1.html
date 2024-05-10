@@ -74,6 +74,30 @@
         color: #009933;
         top: 0;
     }
+    /* Style for images to make them responsive */
+.news-image {
+    max-width: 100%;
+    height: auto;
+    display: block; /* Ensures that it doesn't have extra space at the bottom */
+}
+
+/* Responsive iframe for videos */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
   </style>
 {% endblock %}
 
@@ -92,15 +116,19 @@
                             <h2>{{ news.title }}</h2>
                         </a>
                         <p>Published Date: {{ news.published_date }}</p>
-                        {% if '.gif' in news.photo_url %}
-                            <p>영상 없음.</p>
-                        {% elif 'youtube' in news.photo_url %}
-                            <div>Video: <iframe width="560" height="315" src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+                        {% if news.photo_url %}
+                            {% if 'youtube' in news.photo_url %}
+                                <div class="video-container">
+                                    <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                </div>
+                            {% else %}
+                                <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+                            {% endif %}
                         {% endif %}
                         <div id="content-{{ forloop.counter }}" class="news-content" style="display: none;">
                             <p>{{ news.content }}</p>
                         </div>
-                        <button onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
+                        <button class="summary-button" onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
                         <div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
                             <div class="progress-bar-value" style="width: 0%;"></div>
                             <span class="progress-bar-text">Idle state</span>

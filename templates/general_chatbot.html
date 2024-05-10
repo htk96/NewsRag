@@ -156,7 +156,7 @@
     messageInput.value = ''; // Clear input after sending
 
     // Correct URL pattern based on Django URL configuration.
-    const postUrl = `{% url 'rag_chat_view' news.id %}`;
+    const postUrl = `{% url 'general_rag_chat_view' news.id %}`;
 
     // Correct data sending using 'fetch'
     fetch(postUrl, {

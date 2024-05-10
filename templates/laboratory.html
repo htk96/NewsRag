@@ -1,0 +1,182 @@
+{% extends 'index.html' %}
+
+{% block styles %}
+<style>
+  
+  .container {
+    display: flex;
+    flex-wrap: nowrap; /* Ensures that the container does not wrap */
+    justify-content: space-between;
+    background: url('/static/images/sketchy-background.png');
+    padding: 20px;
+    max-width: 1200px; /* Set a max width for better control of layout */
+    margin: auto; /* Center the container */
+  }
+
+  .scheduler-column {
+    flex: 1 1 30%; /* Adjusting the width to occupy roughly one third of the container */
+    margin: 10px;
+    display: flex;
+    flex-direction: column; /* Aligns items vertically */
+    align-items: center; /* Center items horizontally */
+  }
+
+  .scheduler-box {
+    width: 100%;
+    background-color: transparent; /* Transparent background */
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 10px; /* Space between title and articles */
+  }
+
+  .scheduler-sub-box {
+    width: 100%;
+    background-color: #0099CC; /* Blue background color */
+    color: white; /* White text for better visibility */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    margin-bottom: 10px; /* Space between articles */
+    text-align: left; /* Align text to the left */
+  }
+
+  .news-image, .video-container {
+    width: 100%; /* Ensures that images and videos are responsive */
+    height: auto;
+    margin-bottom: 10px; /* Space below media elements */
+  }
+
+  .video-container iframe {
+    width: 100%;
+    height: 100%;
+  }
+  h6 {
+    text-align: center;
+    {% comment %} border: 1px solid #0099CC; {% endcomment %}
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #99CCFF;
+  }
+
+</style>
+{% endblock styles %}
+{% block content %}
+  <h6>🚴‍♀️서로 다른 요약 모델 성능 비교 페이지🏃‍♂️</h6>
+  <div class="container">
+    <div class="scheduler-column">
+      <div class="scheduler-box">
+        <h2>Cosine Scheduler</h2>
+      </div>
+      {% for news in a_news_list %}
+      <div class="scheduler-sub-box">
+        <h3>Rank: {{ news.rank }}</h3>
+        <h1>업데이트 날짜: {{ news.news_date }}</h1>
+        <a href="{{ news.url }}"><h4>{{ news.title }}</h4></a>
+        {% if news.photo_url %}
+            {% if 'youtube' in news.photo_url %}
+                <div class="video-container">
+                    <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            {% else %}
+                <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+            {% endif %}
+        {% endif %}
+        <button onclick="summarizeNews({{ news.id }}, 'a');">요약하기</button>
+      <div id="summary-{{ news.id }}-a" style="display: none;"></div>
+      <div id="loading-{{ news.id }}-a" style="display: none;">처리중...</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="scheduler-column">
+      <div class="scheduler-box">
+        <h2>Cosine with Restarts Scheduler</h2>
+      </div>
+      {% for news in b_news_list %}
+      <div class="scheduler-sub-box">
+        <h3>Rank: {{ news.rank }}</h3>
+        <h1>업데이트 날짜: {{ news.news_date }}</h1>
+        <a href="{{ news.url }}"><h4>{{ news.title }}</h4></a>
+        {% if news.photo_url %}
+            {% if 'youtube' in news.photo_url %}
+                <div class="video-container">
+                    <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            {% else %}
+                <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+            {% endif %}
+        {% endif %}
+        <button onclick="summarizeNews({{ news.id }}, 'b');">요약하기</button>
+        <div id="summary-{{ news.id }}-b" style="display: none;"></div>
+      <div id="loading-{{ news.id }}-b" style="display: none;">처리중...</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="scheduler-column">
+      <div class="scheduler-box">
+        <h2>Linear Scheduler</h2>
+      </div>
+      {% for news in c_news_list %}
+      <div class="scheduler-sub-box">
+        <h3>Rank: {{ news.rank }}</h3>
+        <h1>업데이트 날짜: {{ news.news_date }}</h1>
+        <a href="{{ news.url }}"><h4>{{ news.title }}</h4></a>
+        {% if news.photo_url %}
+            {% if 'youtube' in news.photo_url %}
+                <div class="video-container">
+                    <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            {% else %}
+                <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+            {% endif %}
+        {% endif %}
+        <button onclick="summarizeNews({{ news.id }}, 'c');">요약하기</button>
+        <div id="summary-{{ news.id }}-c" style="display: none;"></div>
+        <div id="loading-{{ news.id }}-c" style="display: none;">처리중...</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+<script>
+  function summarizeNews(newsId, type) {
+      var summaryDiv = document.getElementById('summary-' + newsId + '-' + type);
+      var loadingDiv = document.getElementById('loading-' + newsId + '-' + type);
+  
+      // Display loading status
+      loadingDiv.style.display = 'block';
+      summaryDiv.style.display = 'none';
+  
+      // Define the endpoint based on the type
+      var endpoint = '';
+      switch (type) {
+          case 'a':
+              endpoint = '/summarize-a/';
+              break;
+          case 'b':
+              endpoint = '/summarize-b/';
+              break;
+          case 'c':
+              endpoint = '/summarize-c/';
+              break;
+      }
+  
+      fetch(endpoint + newsId + '/')
+      .then(response => response.json())
+      .then(data => {
+          // Display the fetched summary
+          summaryDiv.innerHTML = data.summary;
+          summaryDiv.style.display = 'block';
+          loadingDiv.style.display = 'none';
+      })
+      .catch(error => {
+          console.error('Error:', error);
+          summaryDiv.innerHTML = '오류가 발생했습니다.';
+          summaryDiv.style.display = 'block';
+          loadingDiv.style.display = 'none';
+      });
+  }
+  </script>
+  
+  
+{% endblock %}
+

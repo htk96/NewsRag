@@ -1,0 +1,154 @@
+{% extends 'index.html' %}
+{% load static %}
+
+{% block title %}뉴스 요약{% endblock %}
+{% block styles %}
+<style>
+    .news-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr); /* Adjust number of columns as necessary */
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    .news-block {
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .news-block h3 {
+        color: #333;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .news-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .news-list li {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .news-list li:last-child {
+        border-bottom: none;
+    }
+    .news-container {
+         display: flex; flex-wrap: wrap; 
+         justify-content: space-between; 
+    }
+    .news-block {
+         flex: 0 0 49%; 
+        margin-bottom: 20px; 
+    }
+    .news-image {
+        max-width: 100%;
+        height: auto;
+        display: block; /* Ensures that it doesn't have extra space at the bottom */
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+
+<section id="features">
+    <div class="container">
+        <div class="row">
+            <div class="news-container">
+                {% for press_name, news_items in news_by_press.items %}
+                <div class="news-block">
+                    <h3>{{ press_name }}</h3>
+                    <ul class="news-list">
+                        {% for news in news_items %}
+                        <li><a href="{{ news.url }}">{{ news.title }}</a> - Rank: {{ news.rank }}</li>
+                        <p>Published Date: {{ news.published_date }}</p>
+                        {% if news.photo_url %}
+                            {% if 'youtube' in news.photo_url %}
+                                <div class="video-container">
+                                    <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                </div>
+                            {% else %}
+                                <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+                            {% endif %}
+                        {% endif %}
+                        {% with news.summary_set.first as summary %}
+                            {% if summary %}
+                                <p>요약: {{ summary.summary_text }}</p>
+                            {% else %}
+                                <p>요약이 없습니다 버튼을 누르세요</p>
+                                <button class="summary-button" onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
+                                <button class="bot-button" onclick="location.href='{% url 'move_general_chat' news.id %}'">AI에게 기사 내용 물어보기!</button>
+                                <div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
+                                    <div class="progress-bar-value" style="width: 0%;"></div>
+                                    <span class="progress-bar-text">Idle state</span>
+                                </div>
+                                <div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
+                            {% endif %}
+                        {% endwith %}
+
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Scripts -->
+<script>
+    // 요약 내용을 토글하는 기능
+    function toggleContent(index) {
+        var contentDiv = document.getElementById('content-' + index);
+        if (contentDiv.style.display === 'none') {
+            contentDiv.style.display = 'block';
+        } else {
+            contentDiv.style.display = 'none';
+        }
+    }
+    
+    // 뉴스 요약을 가져오고, 진행 상태를 표시하는 기능을 통합한 함수
+    function summarizeNews(newsId) {
+        var progressBar = document.getElementById('progress-' + newsId);
+        var progressValue = progressBar.querySelector('.progress-bar-value');
+        var progressText = progressBar.querySelector('.progress-bar-text');
+        var summaryDiv = document.getElementById('summary-' + newsId);
+    
+        // 프로그레스 바 초기화 및 표시
+        progressBar.style.display = 'block';
+        progressValue.style.width = '40%';
+        progressText.textContent = '처리중...';
+    
+        // Fetch API를 사용하여 서버에 요약을 요청
+        fetch('/General_summarize/' + newsId + '/')  // 수정된 부분
+        .then(response => response.json())
+        .then(data => {
+            // 서버로부터 받은 요약 결과를 페이지에 표시
+            summaryDiv.innerHTML = data.summary;
+            summaryDiv.style.display = 'block';
+    
+            // 프로그레스 바 완료
+            progressValue.style.width = '100%';
+            setTimeout(() => {
+                progressBar.style.display = 'none'; // 1초 후 진행 바 숨김
+                progressValue.style.width = '0%'; // 다음 사용을 위해 리셋
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            progressBar.style.display = 'none'; // 에러 시 프로그레스 바 숨김
+            summaryDiv.innerHTML = '오류가 발생했습니다.';
+            summaryDiv.style.display = 'block';
+        });
+    }
+    </script>
+    
+{% endblock %}

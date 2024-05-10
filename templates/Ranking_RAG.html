@@ -80,19 +80,25 @@
     {% for news in news_list %}
         <div class="news-item">
             <h2>Rank {{ news.rank }}</h2>
+            <a href="{{ news.url }}">
             <h3>{{ news.title }}</h3>
+            </a>
             <p>Published Date: {{ news.published_date|date:"Y-m-d H:i" }}</p>
             {% if news.photo_url %}
-                  <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
-              {% elif 'youtube' in news.photo_url %}
-                  <div>Video: <iframe width="560" height="315" src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+                {% if 'youtube' in news.photo_url %}
+                    <div class="video-container">
+                        <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                {% else %}
+                    <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+                {% endif %}
             {% endif %}
             {% with news.summary_set.first as summary %}
                 {% if summary %}
                     <p>요약: {{ summary.summary_text }}</p>
                 {% else %}
                     <p>요약이 없습니다 버튼을 누르세요</p>
-                    <button onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
+                    <button class="summary-button" onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
                     <div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
                         <div class="progress-bar-value" style="width: 0%;"></div>
                         <span class="progress-bar-text">Idle state</span>
@@ -100,7 +106,7 @@
                     <div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
                 {% endif %}
             {% endwith %}
-            <button class="read-more-button" onclick="location.href='{% url 'move_chat' news.id %}'">기사 내용 상세 QA!</button>
+            <button class="read-more-button" onclick="location.href='{% url 'move_chat' news.id %}'">AI에게 기사 내용 물어보기!</button>
           </div>
     {% endfor %}
 </div>

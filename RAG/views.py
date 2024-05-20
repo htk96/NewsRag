@@ -477,7 +477,7 @@ def run_all_crawlers(request):
 
 # AI타임즈
 def crawl_aitimes():
-    today_news_exists = News.objects.filter(news_date__date=timezone.now().date()).exists()
+    today_news_exists = News.objects.filter(news_date__date=datetime.now().date()).exists()
 
     if not today_news_exists:
         url = 'https://www.aitimes.com/'
@@ -678,7 +678,7 @@ def crawl_yna():
                     published_date=published_date,
                     photo_url=photo_url,
                     content=content,
-                    news_date=timezone.now()
+                    news_date=datetime.now()
                 )
                 news_entry.save()
         
@@ -736,6 +736,6 @@ def crawl_seoul_shinmun():
                     published_date=published_date,
                     photo_url=image_link,
                     content=content,
-                    news_date=timezone.now() 
+                    news_date=datetime.now() 
                 )
                 news_entry.save()

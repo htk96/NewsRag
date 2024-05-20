@@ -5,18 +5,19 @@
 {% block styles %}
 <style>
     .news-container {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr); /* Adjust number of columns as necessary */
-        gap: 20px;
-        padding: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
     }
-    
+
     .news-block {
+        flex: 0 0 49%;
         border: 1px solid #ccc;
         background-color: #f9f9f9;
         border-radius: 10px;
         padding: 15px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        margin-bottom: 20px;
     }
     
     .news-block h3 {
@@ -53,6 +54,15 @@
         height: auto;
         display: block; /* Ensures that it doesn't have extra space at the bottom */
     }
+    @media (max-width: 768px) { /* Adjust breakpoint as needed */
+        .news-container {
+            justify-content: center;
+        }
+
+        .news-block {
+            flex: 0 0 90%; /* Adjust the width to 90% of the container */
+        }
+    }
   </style>
 {% endblock %}
 
@@ -68,36 +78,41 @@
                     <h3>{{ press_name }}</h3>
                     <ul class="news-list">
                         {% for news in news_items %}
-                        <li><a href="{{ news.url }}">{{ news.title }}</a> - Rank: {{ news.rank }}</li>
-                        <p>Published Date: {{ news.published_date }}</p>
-                        {% if news.photo_url %}
-                            {% if 'youtube' in news.photo_url %}
-                                <div class="video-container">
-                                    <iframe src="{{ news.photo_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                </div>
+                            {% if news.news_date.hour < 06 %}
+                                <h1>오전 많이 본 순위: {{ news.rank }}</h1>
                             {% else %}
-                                <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+                                <h1>오후 많이 본 순위: {{ news.rank }}</h1>
                             {% endif %}
-                        {% endif %}
-                        {% with news.summary_set.first as summary %}
-                            {% if summary %}
-                                <p>요약: {{ summary.summary_text }}</p>
-                            {% else %}
-                                <p>요약이 없습니다 버튼을 누르세요</p>
-                                <button class="summary-button" onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
-                                <button class="bot-button" onclick="location.href='{% url 'move_general_chat' news.id %}'">AI에게 기사 내용 물어보기!</button>
+                            <h1><a href="{{ news.url }}">{{ news.title }}</a></h1> 
+                            <p>Published Date: {{ news.published_date }}</p>
+                            {% if news.photo_url %}
+                                {% if 'youtube' in news.photo_url %}
+                                    <div class="video-container">
+                                        <iframe src="{{ news.photo_url }}" frameborder="0" allowfullscreen></iframe>
+                                    </div>
+                                {% else %}
+                                    <img class="news-image" src="{{ news.photo_url }}" alt="News Image">
+                                {% endif %}
+                            {% endif %}
+                            {% with news.summary_set.first as general_summary %}
                                 <div id="progress-{{ news.id }}" class="progress-bar" style="display: none;">
                                     <div class="progress-bar-value" style="width: 0%;"></div>
                                     <span class="progress-bar-text">Idle state</span>
                                 </div>
                                 <div id="summary-{{ news.id }}" class="news-summary" style="display: none;"></div>
-                            {% endif %}
-                        {% endwith %}
-
+                                <button class="summary-button" onclick="summarizeNews({{ news.id }}); showProgress({{ news.id }});">요약하기</button>
+                                {% if press_name == '중앙일보' %}
+                                    <button class="bot-button" disabled="disabled">저작권 문제로 요약만 제공됩니다.</button>
+                                {% else %}
+                                    <button class="bot-button" onclick="location.href='{% url 'move_general_chat' news.id %}'">AI에게 기사 내용 물어보기!</button>
+                                {% endif %}
+                            {% endwith %}
+                            <li></li>
                         {% endfor %}
                     </ul>
                 </div>
-                {% endfor %}
+            {% endfor %}
+
             </div>
         </div>
     </div>

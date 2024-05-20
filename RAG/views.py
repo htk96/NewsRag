@@ -1,12 +1,12 @@
 from django.http import JsonResponse
 from django.contrib import messages
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import pytz
 
 from django.shortcuts import render, get_object_or_404
 import requests
-from bs4 import BeautifulSoup,NavigableString
+from bs4 import BeautifulSoup,NavigableString, SoupStrainer
 from django.utils import timezone
 
 from .models import News, Summary, A_News, B_News, C_News, General_News, General_Summary
@@ -33,9 +33,9 @@ def index(request):
     return render(request, 'index.html')
 
 def laboratory(request):
-    a_news_list = A_News.objects.filter(news_date__date=timezone.now().date()).order_by('rank')[:5]
-    b_news_list = B_News.objects.filter(news_date__date=timezone.now().date()).order_by('rank')[:5]
-    c_news_list = C_News.objects.filter(news_date__date=timezone.now().date()).order_by('rank')[:5]
+    a_news_list = A_News.objects.filter(news_date__date=datetime.now().date()).order_by('rank')[:5]
+    b_news_list = B_News.objects.filter(news_date__date=datetime.now().date()).order_by('rank')[:5]
+    c_news_list = C_News.objects.filter(news_date__date=datetime.now().date()).order_by('rank')[:5]
     
     context = {
         'a_news_list': a_news_list,
@@ -52,7 +52,7 @@ def laboratory_RAG(request):
     return render(request, 'laboratory_RAG.html')
 
 def General_Sum_Bot(request):
-    today_date = timezone.now().date()
+    today_date = datetime.now().date()
     news_list = General_News.objects.filter(news_date__date=today_date).order_by('press_name', 'rank')
 
     news_by_press = {}
@@ -64,11 +64,11 @@ def General_Sum_Bot(request):
     return render(request, 'General_Sum_Bot.html', {'news_by_press': news_by_press})
 
 def Ranking_Sum_ver1(request):
-    news_list = News.objects.filter(news_date__date=timezone.now().date()).order_by('rank')[:10]
+    news_list = News.objects.filter(news_date__date=datetime.now().date()).order_by('rank')[:10]
     return render(request, 'Ranking_Sum_ver1.html', {'news_list': news_list})
 
 def Ranking_RAG(request):
-    news_list = News.objects.filter(news_date__date=timezone.now().date()).order_by('rank')[:10]
+    news_list = News.objects.filter(news_date__date=datetime.now().date()).order_by('rank')[:10]
     return render(request, 'Ranking_RAG.html', {'news_list': news_list})
 
 
@@ -224,7 +224,7 @@ def rag_news_view(request):
 ###따봉 기능을 넣어서 관리자가 사용자의 평가를 확인할 수 있게 추가해야겠음.####
 > 학습량: 기존 모델 data_set=160000, batch=32, epoch=5 || 실험실 모델 main_data/32, batch=32, epoch=50, early_stop=True
 """
-sum_model_name = 'eenzeenee/t5-base-korean-summarization'    
+sum_model_name = 'du-kang/custom1-3'    
 summarization_tokenizer  = AutoTokenizer.from_pretrained(sum_model_name)
 summarization_model  = AutoModelForSeq2SeqLM.from_pretrained(sum_model_name)
 summarize_a = pipeline("summarization", model="du-kang/custom-scheduler-2", tokenizer="du-kang/custom-scheduler-2", max_length=3000)
@@ -286,8 +286,8 @@ def General_summarize_text(request, general_news_id):
         text_to_summarize = news_article.content
         
         prefix = "summarize: "
-        inputs = summarization_tokenizer(prefix + text_to_summarize, return_tensors="pt", padding=True, truncation=True, max_length=3500)
-        summary_outputs = summarization_model.generate(**inputs, num_beams=5, max_length=350, early_stopping=True)
+        inputs = summarization_tokenizer(prefix + text_to_summarize, return_tensors="pt", padding=True, truncation=True, max_length=4096)
+        summary_outputs = summarization_model.generate(**inputs, num_beams=5, max_length=500, early_stopping=True)
         summary_text = summarization_tokenizer.decode(summary_outputs[0], skip_special_tokens=True)
 
         summary, created = General_Summary.objects.get_or_create(
@@ -378,13 +378,21 @@ def rag_chat_view(request, news_id):
 
 @csrf_exempt
 def general_rag_chat_view(request, news_id):
-    
     if request.method == 'POST':
         message = request.POST.get('message')
         news = get_object_or_404(General_News, pk=news_id)
-        url_rag = news.url  
+        url_rag = news.url
+        press_name = news.press_name  # 언론사 이름을 가져옵니다.
 
-        article_strainer = bs4.SoupStrainer('article', id='article-view-content-div')
+        # 언론사 이름에 따라 다른 SoupStrainer 설정
+        if press_name == '매일신문':
+            article_strainer = bs4.SoupStrainer('div', class_='article_content')
+        elif press_name == '연합뉴스':
+            article_strainer = bs4.SoupStrainer('article', class_="story-news article")
+        elif press_name == '서울신문':
+            article_strainer = bs4.SoupStrainer('div', class_='viewContent body18 color700')
+        else:
+            article_strainer = bs4.SoupStrainer('div')  # 기본값 설정
 
         loader = WebBaseLoader(
             web_paths=(url_rag,), 
@@ -436,13 +444,35 @@ def general_rag_chat_view(request, news_id):
 #   --- 크롤링 녀석들 현재는 5개 사이트 --- #
 # 크롤링 본체
 def run_all_crawlers(request):
-    crawl_joongang()  
-    crawl_maeil()     
-    crawl_yna()   
-    crawl_seoul_shinmun()  
-    crawl_aitimes()  
-    today = datetime.now().strftime('%Y.%m.%d')
-    messages.success(request, f'{today}일의 HOT 뉴스 업데이트')
+    now = timezone.now()
+    today = now.strftime('%Y.%m.%d')
+    tomorrow = (now + timedelta(days=1)).date()
+
+    # AI Times 크롤링 (하루에 한 번)
+    if not News.objects.filter(news_date__date=now.date()).exists():
+        crawl_aitimes()
+
+    # 다른 언론사 크롤링 조건 확인 및 실행
+    news_sources = [
+        (crawl_joongang, "중앙일보"),
+        (crawl_maeil, "매일신문"),
+        (crawl_yna, "연합뉴스"),
+        (crawl_seoul_shinmun, "서울신문"),
+    ]
+
+    for crawl_func, press_name in news_sources:
+        if now.hour < 15:
+            if not General_News.objects.filter(press_name=press_name, news_date__date=now.date()).exists():
+                crawl_func()
+        else:
+            if not General_News.objects.filter(press_name=press_name, news_date__date=tomorrow).exists():
+                crawl_func()
+
+    if now.hour < 15:
+        messages.success(request, f'{today}일의 오전 HOT 뉴스 업데이트')
+    else:
+        messages.success(request, f'{today}일의 오후 HOT 뉴스 업데이트')
+
     return render(request, 'index.html')
 
 # AI타임즈
@@ -479,15 +509,19 @@ def crawl_aitimes():
                     figure_element = news_soup.select_one('figure.photo-layout.image')
                     if figure_element:
                         img_element = figure_element.find('img')
-                        if img_element and 'src' in img_element.attrs:
+                        if img_element and img_element.has_attr('src'):
                             src = img_element['src']
                             src_url = src if src.startswith('http') else url + src
+                    else:
+                        iframe_element = news_soup.select_one('iframe')
+                        if iframe_element:
+                            src_url = iframe_element['src']
 
                     News.objects.create(
                         title=title,
                         url=full_url,
                         rank=rank,
-                        news_date=timezone.now(),
+                        news_date=datetime.now(),
                         news_body_title=news_body_title,
                         published_date=published_date,
                         content=content,
@@ -497,7 +531,7 @@ def crawl_aitimes():
                         title=title,
                         url=full_url,
                         rank=rank,
-                        news_date=timezone.now(),
+                        news_date=datetime.now(),
                         content=content,
                         photo_url=src_url
                     )
@@ -505,7 +539,7 @@ def crawl_aitimes():
                         title=title,
                         url=full_url,
                         rank=rank,
-                        news_date=timezone.now(),
+                        news_date=datetime.now(),
                         content=content,
                         photo_url=src_url
                     )
@@ -513,203 +547,195 @@ def crawl_aitimes():
                         title=title,
                         url=full_url,
                         rank=rank,
-                        news_date=timezone.now(),
+                        news_date=datetime.now(),
                         content=content,
                         photo_url=src_url
                     )
 
 # 중앙일보
 def crawl_joongang():
-    today_news_exists = General_News.objects.filter(news_date__date=timezone.now().date()).exists()
 
-    if not today_news_exists:
-        url = "https://www.joongang.co.kr/trend/daily"
-        response = requests.get(url)
+    url = "https://www.joongang.co.kr/trend/daily"
+    response = requests.get(url)
 
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, "html.parser")
-            articles = soup.find_all("li", class_="card")[:5]
-            rank = 1
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "html.parser")
+        articles = soup.find_all("li", class_="card")[:5]
+        rank = 1
 
-            for article in articles:
-                thumbnail = article.find("img")
-                news_url = article.find("a")["href"]
-                image_url = thumbnail["src"] if thumbnail else None
+        for article in articles:
+            thumbnail = article.find("img")
+            news_url = article.find("a")["href"]
+            image_url = thumbnail["src"] if thumbnail else None
 
-                news_response = requests.get(news_url)
-                if news_response.status_code == 200:
-                    news_soup = BeautifulSoup(news_response.content, "html.parser")
-                    title = news_soup.find("h1", class_="headline").text.strip()
-                    news_content = news_soup.find("div", class_="article_body").text.strip()
+            news_response = requests.get(news_url)
+            if news_response.status_code == 200:
+                news_soup = BeautifulSoup(news_response.content, "html.parser")
+                title = news_soup.find("h1", class_="headline").text.strip()
+                news_content = news_soup.find("div", class_="article_body").text.strip()
 
-                    date_container = news_soup.find("time", itemprop="datePublished")
-                    news_date = datetime.strptime(date_container["datetime"], '%Y-%m-%dT%H:%M:%S%z') if date_container else timezone.now()
+                date_container = news_soup.find("time", itemprop="datePublished")
+                news_date = datetime.strptime(date_container["datetime"], '%Y-%m-%dT%H:%M:%S%z') if date_container else timezone.now()
 
-                    news_entry = General_News(
-                        press_name="중앙일보",
-                        title=title,
-                        url=news_url,
-                        rank=rank,
-                        published_date=news_date,
-                        photo_url=image_url,
-                        content=news_content,
-                        news_date=timezone.now()  
-                    )
-                    news_entry.save()
+                news_entry = General_News(
+                    press_name="중앙일보",
+                    title=title,
+                    url=news_url,
+                    rank=rank,
+                    published_date=news_date,
+                    photo_url=image_url,
+                    content=news_content,
+                    news_date=datetime.now() 
+                )
+                news_entry.save()
 
-                    rank += 1
-        
+                rank += 1
+    
 # 매일신문
 def crawl_maeil():
-    today_news_exists = General_News.objects.filter(news_date__date=timezone.now().date()).exists()
 
-    if not today_news_exists:
-        url = "https://www.imaeil.com/"
-        response = requests.get(url)
+    url = "https://www.imaeil.com/"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        thumbnails = soup.find('div', class_='box wcms_bestnews_day').find_all('li')[:5]
+        rank = 1
         
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            thumbnails = soup.find('div', class_='box wcms_bestnews_day').find_all('li')[:5]
-            rank = 1
-            
-            for thumbnail in thumbnails:
-                news_url = thumbnail.find('a')['href']
-                title = thumbnail.find('a').text.strip()
-                news_response = requests.get(news_url)
-                if news_response.status_code == 200:
-                    news_soup = BeautifulSoup(news_response.text, 'html.parser')
-                    
-                    image_tag = news_soup.find('div', class_='article_content').find('img')
-                    photo_url = image_tag['src'] if image_tag else None
-                    
-                    content = ""
-                    article_paragraphs = news_soup.find('div', class_='article_content').find_all('p')
-                    for paragraph in article_paragraphs:
-                        content += paragraph.get_text(strip=True) + "\n"
+        for thumbnail in thumbnails:
+            news_url = thumbnail.find('a')['href']
+            title = thumbnail.find('a').text.strip()
+            news_response = requests.get(news_url)
+            if news_response.status_code == 200:
+                news_soup = BeautifulSoup(news_response.text, 'html.parser')
+                
+                image_tag = news_soup.find('div', class_='article_content').find('img')
+                photo_url = image_tag['src'] if image_tag else None
+                
+                content = ""
+                article_paragraphs = news_soup.find('div', class_='article_content').find_all('p')
+                for paragraph in article_paragraphs:
+                    content += paragraph.get_text(strip=True) + "\n"
 
-                    date_container = news_soup.find('span', class_='pblsh_time') 
-                    if date_container:
-                        published_date = datetime.strptime(date_container.text.strip(), '%Y-%m-%d %H:%M')  
-                        published_date = pytz.timezone('Asia/Seoul').localize(published_date) 
-                    else:
-                        published_date = timezone.now()  
+                date_container = news_soup.find('span', class_='pblsh_time') 
+                if date_container:
+                    published_date = datetime.strptime(date_container.text.strip(), '%Y-%m-%d %H:%M')  
+                    published_date = pytz.timezone('Asia/Seoul').localize(published_date) 
+                else:
+                    published_date = datetime.now() 
 
-                    # Save to database
-                    news_entry = General_News(
-                        press_name="매일신문",
-                        title=title,
-                        url=news_url,
-                        rank=rank,
-                        published_date=published_date,
-                        photo_url=photo_url,
-                        content=content,
-                        news_date=timezone.now()
-                    )
-                    news_entry.save()
-                    
-                    rank += 1
+                # Save to database
+                news_entry = General_News(
+                    press_name="매일신문",
+                    title=title,
+                    url=news_url,
+                    rank=rank,
+                    published_date=published_date,
+                    photo_url=photo_url,
+                    content=content,
+                    news_date=datetime.now()
+                )
+                news_entry.save()
+                
+                rank += 1
         
 # 연합뉴스
 def crawl_yna():
-    today_news_exists = General_News.objects.filter(news_date__date=timezone.now().date()).exists()
 
-    if not today_news_exists:
-        url = "https://www.yna.co.kr/theme/topnews-history"
-        response = requests.get(url)
+    url = "https://www.yna.co.kr/theme/topnews-history"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        articles = soup.find_all("div", class_="item-box01")
         
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, "html.parser")
-            articles = soup.find_all("div", class_="item-box01")
-            
-            for rank, article in enumerate(articles[:5], start=1):
-                link = article.find("a")["href"].replace("//", "https://")
-                response = requests.get(link)
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.text, "html.parser")
-                    title = soup.find("h1", class_="tit").text.strip()
+        for rank, article in enumerate(articles[:5], start=1):
+            link = article.find("a")["href"].replace("//", "https://")
+            response = requests.get(link)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                title = soup.find("h1", class_="tit").text.strip()
 
-                    date_container = soup.find("p", class_="update-time")
-                    try:
-                        published_date = datetime.strptime(date_container.text.strip(), '%Y-%m-%d %H:%M') 
-                        published_date = pytz.timezone('Asia/Seoul').localize(published_date)
-                    except ValueError:
-                        published_date = timezone.now() 
-                    
-                    photo_url = soup.find("meta", property="og:image")["content"].replace("//", "https://")
-                    content = ""
-                    article_paragraphs = soup.find("article", class_="story-news article").find_all('p')
-                    for paragraph in article_paragraphs:
-                        content += paragraph.get_text(strip=True) + "\n"
-                    
-                    # Save to database
-                    news_entry = General_News(
-                        press_name="연합뉴스",
-                        title=title,
-                        url=link,
-                        rank=rank,
-                        published_date=published_date,
-                        photo_url=photo_url,
-                        content=content,
-                        news_date=timezone.now()
-                    )
-                    news_entry.save()
+                date_container = soup.find("p", class_="update-time")
+                try:
+                    published_date = datetime.strptime(date_container.text.strip(), '%Y-%m-%d %H:%M') 
+                    published_date = pytz.timezone('Asia/Seoul').localize(published_date)
+                except ValueError:
+                    published_date = timezone.now() 
+                
+                photo_url = soup.find("meta", property="og:image")["content"].replace("//", "")
+                content = ""
+                article_paragraphs = soup.find("article", class_="story-news article").find_all('p')
+                for paragraph in article_paragraphs:
+                    content += paragraph.get_text(strip=True) + "\n"
+                
+                # Save to database
+                news_entry = General_News(
+                    press_name="연합뉴스",
+                    title=title,
+                    url=link,
+                    rank=rank,
+                    published_date=published_date,
+                    photo_url=photo_url,
+                    content=content,
+                    news_date=timezone.now()
+                )
+                news_entry.save()
         
 # 서울신문
 def crawl_seoul_shinmun():
-    today_news_exists = General_News.objects.filter(news_date__date=timezone.now().date()).exists()
 
-    if not today_news_exists:
-        url = "https://www.seoul.co.kr/"
-        response = requests.get(url)
+    url = "https://www.seoul.co.kr/"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
+        news_list = soup.select('.topRankNews .topRankList li')
+        
+        for rank, news in enumerate(news_list, start=1):
+            news_link = news.find('a')['href']
+            full_news_link = url + news_link if news_link.startswith('/') else news_link
             
-            news_list = soup.select('.topRankNews .topRankList li')
-            
-            for rank, news in enumerate(news_list, start=1):
-                news_link = news.find('a')['href']
-                full_news_link = url + news_link if news_link.startswith('/') else news_link
+            news_response = requests.get(full_news_link)
+            if news_response.status_code == 200:
+                news_soup = BeautifulSoup(news_response.content, 'html.parser')
+
+                title_div = news_soup.find('div', class_='articleTitle')
+                title = title_div.find('h1').text.strip() if title_div and title_div.find('h1') else 'Title not found'
                 
-                news_response = requests.get(full_news_link)
-                if news_response.status_code == 200:
-                    news_soup = BeautifulSoup(news_response.content, 'html.parser')
+                image_element = news_soup.find('div', class_='expendImageWrap')
+                image_link = image_element.find('img')['src'] if image_element and image_element.find('img') else None
+                
+                date_info = news_soup.find('span', class_='writeInfo')
+                if date_info:
+                    try:
+                        published_date = datetime.strptime(date_info.text.strip(), '%Y-%m-%d %H:%M') 
+                        published_date = pytz.timezone('Asia/Seoul').localize(published_date) 
+                    except ValueError:
+                        published_date = timezone.now() 
+                else:
+                    published_date = timezone.now()
+                
+                content_div = news_soup.find('div', class_='viewContent body18 color700')
+                content = ""
+                if content_div:
+                    for element in content_div.contents:
+                        if isinstance(element, NavigableString):
+                            text = str(element).strip()
+                            if text:
+                                content += text + " "
+                        elif element.name == 'br':
+                            content += "\n"
 
-                    title_div = news_soup.find('div', class_='articleTitle')
-                    title = title_div.find('h1').text.strip() if title_div and title_div.find('h1') else 'Title not found'
-                    
-                    image_element = news_soup.find('div', class_='expendImageWrap')
-                    image_link = image_element.find('img')['src'] if image_element and image_element.find('img') else None
-                    
-                    date_info = news_soup.find('span', class_='writeInfo')
-                    if date_info:
-                        try:
-                            published_date = datetime.strptime(date_info.text.strip(), '%Y-%m-%d %H:%M') 
-                            published_date = pytz.timezone('Asia/Seoul').localize(published_date) 
-                        except ValueError:
-                            published_date = timezone.now() 
-                    else:
-                        published_date = timezone.now()
-                    
-                    content_div = news_soup.find('div', class_='viewContent body18 color700')
-                    content = ""
-                    if content_div:
-                        for element in content_div.contents:
-                            if isinstance(element, NavigableString):
-                                text = str(element).strip()
-                                if text:
-                                    content += text + " "
-                            elif element.name == 'br':
-                                content += "\n"
-
-                    news_entry = General_News(
-                        press_name="서울신문",
-                        title=title,
-                        url=full_news_link,
-                        rank=rank,
-                        published_date=published_date,
-                        photo_url=image_link,
-                        content=content,
-                        news_date=timezone.now() 
-                    )
-                    news_entry.save()
+                news_entry = General_News(
+                    press_name="서울신문",
+                    title=title,
+                    url=full_news_link,
+                    rank=rank,
+                    published_date=published_date,
+                    photo_url=image_link,
+                    content=content,
+                    news_date=timezone.now() 
+                )
+                news_entry.save()
